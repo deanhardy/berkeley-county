@@ -226,3 +226,22 @@ df %>%
   st_set_geometry(NULL) %>%
   write.csv(file.path(datadir, 'aoi_data.csv'), row.names = FALSE)
 
+###################################
+## make table for AOI demographics
+###################################
+library(expss) ## https://cran.r-project.org/web/packages/expss/vignettes/tables-with-labels.html
+
+df = apply_labels(df,
+                  tot_pop = 'Total Population',
+                  popden = 'Population Density (per km^2)',
+                  pwhite = 'Proportion White',
+                  pblack = 'Proportion Black',
+                  emedhhinc = 'Estimated Median Household Income',
+                  rowid = 'Row ID'
+)
+
+df %>% 
+  tab_cells(tot_pop, popden, pwhite, pblack, emedhhinc) %>%
+  tab_cols(total(), rowid) %>%
+  tab_stat_cpct() %>% 
+  tab_pivot()
