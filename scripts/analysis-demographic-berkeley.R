@@ -196,7 +196,7 @@ GMedian <- function(frequencies, intervals, sep = NULL, trim = NULL) {
   unname(L + (n_2 - B)/G * w)
 }
 
-bg2 <- gm %>%
+gm2 <- gm %>%
   left_join(bg_for_emed, by = "GEOID") %>%
   filter(perc_bginaoi != 'NA') %>%
   mutate(eHH = households * perc_bginaoi) %>%
@@ -205,13 +205,18 @@ bg2 <- gm %>%
   summarise(gmedian = GMedian(eHH, interval, sep = "-", trim = 'cut'))
 
 ## import gmedian estimates for hh income
-emed <- bg2 %>%
+emed <- gm2 %>%
   rename(rowid = AOIID, emedhhinc = gmedian) %>%
   mutate(emedhhinc = round(emedhhinc, 0))
 
 ## merge emedian hh income with other demographic data
 df <- aoi_demo %>% 
   merge(emed, by = "rowid") %>%
+  mutate(tot_pop = round(tot_pop, 0), 
+         popden = round(popden, 1),
+         sqkm_aoi.x = round(sqkm_aoi.x, 0),
+         pwhite = round(pwhite*100, 0),
+         propPOC = round(propPOC*100, 0)) %>%
   st_transform(4326) 
 
 ##############################
@@ -229,19 +234,155 @@ df %>%
 ###################################
 ## make table for AOI demographics
 ###################################
-library(expss) ## https://cran.r-project.org/web/packages/expss/vignettes/tables-with-labels.html
+# library(expss) ## https://cran.r-project.org/web/packages/expss/vignettes/tables-with-labels.html
+# 
+# df = apply_labels(df,
+#                   tot_pop = 'Total Population',
+#                   popden = 'Population Density (per km^2)',
+#                   pwhite = 'Proportion White',
+#                   pblack = 'Proportion Black',
+#                   emedhhinc = 'Estimated Median Household Income',
+#                   rowid = 'Row ID'
+# )
+# 
+# df %>% 
+#   tab_cells(tot_pop, popden, pwhite, pblack, emedhhinc) %>%
+#   tab_cols(total(), rowid) %>%
+#   tab_stat_cpct() %>% 
+#   tab_pivot()
 
-df = apply_labels(df,
-                  tot_pop = 'Total Population',
-                  popden = 'Population Density (per km^2)',
-                  pwhite = 'Proportion White',
-                  pblack = 'Proportion Black',
-                  emedhhinc = 'Estimated Median Household Income',
-                  rowid = 'Row ID'
-)
+library(data.table)
+library(formattable)
 
-df %>% 
-  tab_cells(tot_pop, popden, pwhite, pblack, emedhhinc) %>%
-  tab_cols(total(), rowid) %>%
-  tab_stat_cpct() %>% 
-  tab_pivot()
+df %>%
+  as.data.table() %>%
+  select(tot_pop:emedhhinc) %>%
+  select(-pland, -pblack, -pother, -platinx) %>%
+  rename(., 
+         'Area (km^2)' = sqkm_aoi.x,
+         'Total Population' = tot_pop, 
+         'Population Density (km^2)' = popden, 
+         'White (%)' = pwhite,
+         'People of Color (%)' = propPOC,
+         'Housing Units (#)' = hu,
+         'Mean Household Income ($)' = mnhhinc,
+         'Estimated Median Household Income ($)' = emedhhinc) %>%
+  formattable()
+
+
+
+#############################################
+## create maps
+#############################################
+library(leaflet)
+library(leaflet.extras)
+library(sf)
+
+# all_vars <- load_variables(2016, 'acs5', cache = TRUE)
+var = c(white = "B03002_003E", black = "B03002_004E",
+        native_american = "B03002_005E", asian = "B03002_006E",
+        hawaiian = "B03002_007E", other = "B03002_008E",
+        multiracial = "B03002_009E", latinx = "B03002_012E", tot_pop = "B03002_001E",
+        medhhinc = "B19049_001E", agghhinc = "B19025_001E", hu = "B25001_001E", ownocc = "B25003_002E")
+CNTY = c('Berkeley')
+
+dem <- get_acs(geography = 'block group',
+               variables = var,
+               state = 'SC',
+               county = CNTY,
+               year = 2017,
+               output = 'wide',
+               geometry = TRUE,
+               keep_geo_vars = TRUE)
+
+dem2 <- dem %>%
+  st_sf() %>%
+  st_transform(alb) %>%
+  mutate(sqkm_bg = as.numeric(st_area(geometry)) / 1e6,
+         propPOC = 1 - (white/tot_pop)) %>%
+  dplyr::select(GEOID, ALAND, AWATER, sqkm_bg, tot_pop, white, black, native_american, asian, hawaiian,
+                other, multiracial, latinx, propPOC, medhhinc, agghhinc, hu, ownocc) %>%
+  mutate(pwhite = round(white/tot_pop, 2), pblack = round(black/tot_pop, 2), pother = round(other/tot_pop, 2), 
+         platinx = round(latinx/tot_pop, 2), popden = round(tot_pop/ALAND, 2),
+         pland = round((ALAND * 0.000001)/sqkm_bg, 2), pownocc = round(ownocc/hu, 2)) %>%
+  st_transform(4326)
+
+# factpal <- colorFactor(rainbow(8), buf$id)
+bpal <- colorBin('Reds', dem2$medhhinc, 5, pretty = FALSE)
+bpal2 <- colorBin('Greens', 100*dem2$propPOC, 5, pretty = FALSE)
+bpal3 <- colorBin('Blues', 100*dem2$pownocc, 5, pretty = FALSE)
+pops <- paste("People of Color (%):", round(100*dem2$propPOC, 0), "<br>",
+              "Black (%):", 100*dem2$pblack, "<br>",
+              "Other race (%):", 100*dem2$pother, "<br>",
+              "Latinx (%):", 100*dem2$platinx, "<br>",
+              "White (%):", 100*dem2$pwhite, "<br>",
+              "Median HH Income (US$):", round(dem2$medhhinc, 0), "<br>",
+              "Housing Units (#):", dem2$hu, "<br>",
+              "Owner-Occupied HU (%):", 100*dem2$pownocc)
+
+m <- leaflet() %>%
+  addTiles(group = "Open Street Map") %>%  
+  addTiles(attribution = '<a href="https://www.census.gov/programs-surveys/acs/"> | US Census American Community Survey 2013-2017</a>') %>%
+  # addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
+  setView(lng = -80, lat = 33.2, zoom = 10) %>%
+  addSearchOSM(options = searchOptions(autoCollapse = TRUE, minLength = 2)) %>%
+  addPolygons(data = dem2,
+              group = 'Median Household Income',
+              fillColor = ~bpal(dem2$medhhinc),
+              color = 'grey',
+              weight = 1,
+              fillOpacity = 0.5,
+              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              popup = pops) %>%
+  addPolygons(data = dem2,
+              group = 'People of Color',
+              fillColor = ~bpal2(100*dem2$propPOC),
+              fillOpacity = 0.5,
+              color = 'grey',
+              weight = 1,
+              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              popup = pops) %>%
+  addPolygons(data = dem2,
+              group = 'Owner Occupied Housing',
+              fillColor = ~bpal3(100*dem2$pownocc),
+              fillOpacity = 0.5,
+              color = 'grey',
+              weight = 1,
+              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              popup = pops) %>%
+  addPolygons(data = dem2,
+              group = 'Demographic Info',
+              color = 'grey',
+              weight = 1,
+              fillOpacity = 0,
+              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              popup = pops) %>%
+  addPolylines(data = AOI,
+               color = 'black') %>%
+  addLayersControl(baseGroups = c('Open Street Map'),
+                  overlayGroups = c('Median Household Income', 'People of Color', "Owner Occupied Housing"),
+                  options = layersControlOptions(collapsed = TRUE)) %>%
+  addLegend('bottomright',
+            group = 'Median Household Income',
+            pal = bpal,
+            values = dem2$medhhinc,
+            title = 'Median HH Income') %>%
+  addLegend('bottomright',
+            group = 'People of Color',
+            pal = bpal2,
+            values = 100*dem2$propPOC,
+            title = 'People of Color (%)') %>%
+  addLegend('bottomright',
+            group = 'Owner Occupied Housing',
+            pal = bpal3,
+            values = 100*dem2$pownocc,
+            title = 'Owner Occupied Housing (%)') %>%
+  hideGroup(group = c('People of Color', 'Owner Occupied Housing'))
+m
+
+## export as interactive html map
+library(htmlwidgets)
+saveWidget(m,
+           file="/Users/dhardy/Dropbox/r_data/berkeley-county/map.html",
+           title = "Berkeley County, SC Information")
+
