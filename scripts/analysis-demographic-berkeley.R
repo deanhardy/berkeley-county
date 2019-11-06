@@ -31,7 +31,7 @@ AOI <- st_read(file.path(datadir, '/spatial-data/district_7')) %>%
   st_transform(alb) %>%
   rowid_to_column() %>%
   mutate(sqkm_aoi = as.numeric(st_area(geometry) / 1e6))
-wtr_main <- st_read(file.path(datadir, '/spatial-data/wtrMain'))
+wtr_main <- st_read(file.path(datadir, '/spatial-data/wtrMain')) %>% st_transform(4326)
 wtr_conn <- st_read(file.path(datadir, '/spatial-data/wtrConnections'))
 
 ## download blockgroup census variables for selected states
@@ -278,6 +278,8 @@ library(leaflet)
 library(leaflet.extras)
 library(sf)
 
+AOI <- AOI %>% st_transform(4326)
+
 # all_vars <- load_variables(2016, 'acs5', cache = TRUE)
 var = c(white = "B03002_003E", black = "B03002_004E",
         native_american = "B03002_005E", asian = "B03002_006E",
@@ -357,8 +359,12 @@ m <- leaflet() %>%
               fillOpacity = 0,
               highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
               popup = pops) %>%
+  addPolylines(data = wtr_main,
+               color = "blue",
+               weight = 0.5) %>%
   addPolylines(data = AOI,
-               color = 'black') %>%
+               color = 'black',
+               weight = 2) %>%
   addLayersControl(baseGroups = c('Open Street Map'),
                   overlayGroups = c('Median Household Income', 'People of Color', "Owner Occupied Housing"),
                   options = layersControlOptions(collapsed = TRUE)) %>%
