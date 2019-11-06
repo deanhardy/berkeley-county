@@ -361,10 +361,10 @@ m <- leaflet() %>%
               popup = pops) %>%
   addPolylines(data = wtr_main,
                color = "blue",
-               weight = 0.5) %>%
+               weight = 1) %>%
   addPolylines(data = AOI,
                color = 'black',
-               weight = 2) %>%
+               weight = 3) %>%
   addLayersControl(baseGroups = c('Open Street Map'),
                   overlayGroups = c('Median Household Income', 'People of Color', "Owner Occupied Housing"),
                   options = layersControlOptions(collapsed = TRUE)) %>%
