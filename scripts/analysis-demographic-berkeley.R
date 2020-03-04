@@ -334,7 +334,7 @@ m <- leaflet() %>%
               color = 'grey',
               weight = 1,
               fillOpacity = 0.5,
-              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              highlightOptions = highlightOptions(color = "yellow", weight = 2,bringToFront = TRUE),
               popup = pops) %>%
   addPolygons(data = dem2,
               group = 'People of Color',
@@ -342,7 +342,7 @@ m <- leaflet() %>%
               fillOpacity = 0.5,
               color = 'grey',
               weight = 1,
-              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              highlightOptions = highlightOptions(color = "yellow", weight = 2,bringToFront = TRUE),
               popup = pops) %>%
   addPolygons(data = dem2,
               group = 'Owner Occupied Housing',
@@ -350,18 +350,18 @@ m <- leaflet() %>%
               fillOpacity = 0.5,
               color = 'grey',
               weight = 1,
-              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              highlightOptions = highlightOptions(color = "yellow", weight = 2,bringToFront = TRUE),
               popup = pops) %>%
   addPolygons(data = dem2,
               group = 'Demographic Info',
               color = 'grey',
               weight = 1,
               fillOpacity = 0,
-              highlightOptions = highlightOptions(color = "red", weight = 2,bringToFront = TRUE),
+              highlightOptions = highlightOptions(color = "yellow", weight = 2,bringToFront = TRUE),
               popup = pops) %>%
   addPolylines(data = wtr_main,
                color = "blue",
-               weight = 1) %>%
+               weight = 2) %>%
   addPolylines(data = wtr_conn,
                color = "red",
                weight = 2) %>%
@@ -395,16 +395,16 @@ saveWidget(m,
            file="/Users/dhardy/Dropbox/r_data/berkeley-county/map.html",
            title = "Berkeley County, SC Information")
 
-m <- leaflet() %>%
-  addTiles(group = "Open Street Map") %>%  
-  addTiles(attribution = '<a href="https://www.census.gov/programs-surveys/acs/"> | US Census American Community Survey 2013-2017</a>') %>%
-  # addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
-  setView(lng = -80, lat = 33.2, zoom = 10) %>%
-  addSearchOSM(options = searchOptions(autoCollapse = TRUE, minLength = 2)) %>%
-  # addPolylines(data = wtr_main,
-  #              color = "blue",
-  #              weight = 1) %>%
-  addPolylines(data = wtr_conn,
-               color = "red",
-               weight = 2)
-m
+# m <- leaflet() %>%
+#   addTiles(group = "Open Street Map") %>%  
+#   addTiles(attribution = '<a href="https://www.census.gov/programs-surveys/acs/"> | US Census American Community Survey 2013-2017</a>') %>%
+#   # addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
+#   setView(lng = -80, lat = 33.2, zoom = 10) %>%
+#   addSearchOSM(options = searchOptions(autoCollapse = TRUE, minLength = 2)) %>%
+#   # addPolylines(data = wtr_main,
+#   #              color = "blue",
+#   #              weight = 1) %>%
+#   addPolylines(data = wtr_conn,
+#                color = "red",
+#                weight = 2)
+# m
