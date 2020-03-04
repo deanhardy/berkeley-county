@@ -32,7 +32,7 @@ AOI <- st_read(file.path(datadir, '/spatial-data/district_7')) %>%
   rowid_to_column() %>%
   mutate(sqkm_aoi = as.numeric(st_area(geometry) / 1e6))
 wtr_main <- st_read(file.path(datadir, '/spatial-data/wtrMain')) %>% st_transform(4326)
-wtr_conn <- st_read(file.path(datadir, '/spatial-data/wtrConnections'))
+wtr_conn <- st_read(file.path(datadir, '/spatial-data/wtrConnections')) %>% st_transform(4326)
 
 ## download blockgroup census variables for selected states
 bg <- get_acs(geography = "block group",
@@ -362,6 +362,9 @@ m <- leaflet() %>%
   addPolylines(data = wtr_main,
                color = "blue",
                weight = 1) %>%
+  addPolylines(data = wtr_conn,
+               color = "red",
+               weight = 2) %>%
   addPolylines(data = AOI,
                color = 'black',
                weight = 3) %>%
@@ -392,3 +395,16 @@ saveWidget(m,
            file="/Users/dhardy/Dropbox/r_data/berkeley-county/map.html",
            title = "Berkeley County, SC Information")
 
+m <- leaflet() %>%
+  addTiles(group = "Open Street Map") %>%  
+  addTiles(attribution = '<a href="https://www.census.gov/programs-surveys/acs/"> | US Census American Community Survey 2013-2017</a>') %>%
+  # addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
+  setView(lng = -80, lat = 33.2, zoom = 10) %>%
+  addSearchOSM(options = searchOptions(autoCollapse = TRUE, minLength = 2)) %>%
+  # addPolylines(data = wtr_main,
+  #              color = "blue",
+  #              weight = 1) %>%
+  addPolylines(data = wtr_conn,
+               color = "red",
+               weight = 2)
+m
