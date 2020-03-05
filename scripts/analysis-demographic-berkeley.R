@@ -17,7 +17,7 @@ datadir <- file.path('/Users/dhardy/Dropbox/r_data/berkeley-county')
 ## define census variables
 alb <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-84 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs" ## http://spatialreference.org/ref/sr-org/albers-conic-equal-area-for-florida-and-georgia/
 bg <- NULL
-YR <- 2017
+YR <- 2018
 ST <- c('SC')
 CNTY <- c('Berkeley')
 var = c(white = "B03002_003E", black = "B03002_004E",
@@ -33,6 +33,7 @@ AOI <- st_read(file.path(datadir, '/spatial-data/district_7')) %>%
   mutate(sqkm_aoi = as.numeric(st_area(geometry) / 1e6))
 wtr_main <- st_read(file.path(datadir, '/spatial-data/wtrMain')) %>% st_transform(4326)
 wtr_conn <- st_read(file.path(datadir, '/spatial-data/wtrConnections')) %>% st_transform(4326)
+dist7add <- st_read(file.path(datadir, '/spatial-data/district7_addresses')) %>% st_transform(4326)
 
 ## get county level data
 cnty<- get_acs(geography = "county",
@@ -54,7 +55,7 @@ cnty2 <- cnty %>%
   st_transform(4326)
 
 ## throws error, but not sure why...
-st_write(cnty2, file.path(datadir, 'berkely-cnty-demographics.shp'), 'ESRI Shapefile', delete_dsn = TRUE)
+st_write(cnty2, file.path(datadir, 'berkeley-cnty-demographics.shp'), 'ESRI Shapefile', delete_dsn = TRUE)
 
 ## download blockgroup census variables for selected states
 bg <- get_acs(geography = "block group",
@@ -246,7 +247,7 @@ df <- aoi_demo %>%
 ##############################
 
 ## export AOI as polygons
-df %>% st_write(file.path(datadir, 'aoi.geojson'), driver = 'geojson', delete_dsn = TRUE)
+df %>% st_write(file.path(datadir, 'berkeley-dist7-demographics.shp'), 'ESRI Shapefile', delete_dsn = TRUE)
 
 ## export ONLY attribute data
 df %>%
@@ -314,7 +315,7 @@ dem <- get_acs(geography = 'block group',
                variables = var,
                state = 'SC',
                county = CNTY,
-               year = 2017,
+               year = YR,
                output = 'wide',
                geometry = TRUE,
                keep_geo_vars = TRUE)
@@ -331,7 +332,7 @@ dem2 <- dem %>%
          pland = round((ALAND * 0.000001)/sqkm_bg, 2), pownocc = round(ownocc/hu, 2)) %>%
   st_transform(4326)
 
-st_write(dem2, file.path(datadir, 'berkeley-bg-demographics.shp'), 'ESRI shapefile')
+st_write(dem2, file.path(datadir, 'berkeley-bg-demographics.shp'), 'ESRI shapefile', delete_dsn = TRUE)
 
 # factpal <- colorFactor(rainbow(8), buf$id)
 bpal <- colorBin('Reds', dem2$medhhinc, 5, pretty = FALSE)
