@@ -34,6 +34,28 @@ AOI <- st_read(file.path(datadir, '/spatial-data/district_7')) %>%
 wtr_main <- st_read(file.path(datadir, '/spatial-data/wtrMain')) %>% st_transform(4326)
 wtr_conn <- st_read(file.path(datadir, '/spatial-data/wtrConnections')) %>% st_transform(4326)
 
+## get county level data
+cnty<- get_acs(geography = "county",
+               variables = var,
+               state = ST,
+               county = CNTY,
+               year = YR,
+               output = 'wide',
+               geometry = TRUE,
+               keep_geo_vars = TRUE)
+
+## transform and tidy census data
+cnty2 <- cnty %>%
+  st_transform(alb) %>%
+  mutate(sqkm_bg = as.numeric(st_area(geometry)) / 1e6, mnhhinc = agghhinc/hu,
+         propPOC = 1 - (white/total)) %>%
+  dplyr::select(GEOID, ALAND, AWATER, sqkm_bg, total, white, black, native_american, asian, hawaiian,
+                other, multiracial, latinx, propPOC, medhhinc, agghhinc, hu, mnhhinc) %>%
+  st_transform(4326)
+
+## throws error, but not sure why...
+st_write(cnty2, file.path(datadir, 'berkely-cnty-demographics.shp'), 'ESRI Shapefile', delete_dsn = TRUE)
+
 ## download blockgroup census variables for selected states
 bg <- get_acs(geography = "block group",
                  variables = var,
@@ -308,6 +330,8 @@ dem2 <- dem %>%
          platinx = round(latinx/tot_pop, 2), popden = round(tot_pop/ALAND, 2),
          pland = round((ALAND * 0.000001)/sqkm_bg, 2), pownocc = round(ownocc/hu, 2)) %>%
   st_transform(4326)
+
+st_write(dem2, file.path(datadir, 'berkeley-bg-demographics.shp'), 'ESRI shapefile')
 
 # factpal <- colorFactor(rainbow(8), buf$id)
 bpal <- colorBin('Reds', dem2$medhhinc, 5, pretty = FALSE)
